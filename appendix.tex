@@ -1,0 +1,154 @@
+% =============================================
+% 文件名: appendix.tex
+% 描述: 包含附录内容，包括 Fuzz Test Prompt 的定义
+% =============================================
+
+% 确保在 main.tex 中正确加载了 tcolorbox 和 listings 宏包
+
+\section{Configuration Mutation Prompt}
+\label{app:gen_prompt}
+\begin{tcolorbox}[
+    % ... (其他样式)
+    box align=center,
+    width=\textwidth,
+    colback=white,
+    colframe=black,
+    arc=3mm,
+    fonttitle=\bfseries\color{white},
+    colbacktitle=black,
+]
+Here is the task: You are a 5G gNB configuration fuzz-test expert specializing in the \textbf{\{COMPONENT\}} component.
+Given the following valid JSON configuration (Reference JSON) and the original .conf (Baseline Conf), generate exactly \textbf{\{N\_VARIATIONS\}} single-key error test cases and output them as a JSON array.
+
+\vspace{0.5em}\hrule\vspace{0.5em}
+
+\textbf{Rules for Error Generation}
+\begin{itemize}
+    \item[1.] Single Modification: Modify exactly one key per test case (a single-key error).
+    \item[2.] Quantity: Produce \textbf{\{N\_VARIATIONS\}} distinct, unique test cases.
+    \item[3.] Realism: Errors must be realistic and likely to cause system faults, configuration rejection, or unexpected behavior in a gNB \textbf{\{COMPONENT\}} system.
+    \item[4.] Format Adherence: Your output MUST be a JSON array following the "Output Schema" structure.
+    \item[5.] Clean Output: Your entire response MUST be only the JSON array. Do not include any other text, explanations, or code blocks outside the final JSON.
+    \item[6.] Error categories (cover at least these):
+    \begin{itemize}
+        \item out\_of\_range
+        \item wrong\_type
+        \item invalid\_enum
+        \item invalid\_format
+        \item logical\_contradiction
+        \item missing\_value
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.5em}\hrule\vspace{0.5em}
+
+\textbf{Input: Workable .conf file content (for context)}
+\begin{verbatim}
+---[START {COMPONENT}.CONF]---
+{conf_content}
+---[END {COMPONENT}.CONF]---
+\end{verbatim}
+
+\vspace{0.5em}\hrule\vspace{0.5em}
+
+\textbf{Input: Reference .json file content (The base configuration to modify)}
+\begin{verbatim}
+---[START {COMPONENT}.JSON]---
+{json_content}
+---[END {COMPONENT}.JSON]---
+\end{verbatim}
+
+\vspace{0.5em}\hrule\vspace{0.5em}
+
+\textbf{Output Schema (Produce a JSON array of objects like this)}
+\begin{verbatim}
+[
+    {
+      "filename": "{COMPONENT}_case_001.json",
+      "modified_key": "path.to.the.key",
+      "original_value": "original_value_from_json",
+      "error_value": "new_generated_error_value"
+    },
+    // ... Repeat for N_VARIATIONS
+    {
+      "filename": "{COMPONENT}_case_{N_VARIATIONS}.json",
+      "modified_key": "path.to.the.key",
+      "original_value": "original_value_from_json",
+      "error_value": "new_generated_error_value"
+    }
+]
+\end{verbatim}
+
+\vspace{0.5em}\hrule\vspace{0.5em}
+
+Generate the \{N\_VARIATIONS\} \{COMPONENT\} error-case variations now as a JSON array.
+\end{tcolorbox}
+
+
+% ==============================================
+% File: 5G_NR_OAI_Reasoning_Trace_Prompt.tex
+% Description: LaTeX-formatted prompt for 5G NR / OAI Reasoning Trace Generation
+% ==============================================
+
+
+\section{Reasoning Trace Prompt}
+\label{app:reasoning_prompt}
+\begin{tcolorbox}[
+    % ... (其他样式)
+    box align=center,
+    width=\textwidth,
+    colback=white,
+    colframe=black,
+    arc=3mm,
+    fonttitle=\bfseries\color{white},
+    colbacktitle=black,
+]
+
+You are an expert 5G NR and OpenAirInterface (OAI) analyst. Your task is to analyze the provided JSON containing logs from CU, DU, and UE (for the error case), the misconfigured parameter causing the issue, and the extracted network configuration (focused on gnb.conf and ue.conf parameters as JSON objects), to generate a detailed step-by-step reasoning trace. This trace diagnoses the issue, identifies the root cause based on the misconfigured parameter, and explains the fix. The reasoning should be structured to teach another model how to perform similar analysis, emphasizing systematic thinking, cross-component correlation, and use of external knowledge via tools if needed. Assume advance knowledge of the issue from the misconfigured parameter to guide the diagnosis.
+
+\vspace{1em}
+
+Input JSON structure:
+\begin{itemize}
+    \item[\textbullet] \textbf{"misconfigured\_param"}: The wrong parameter value causing the issue (e.g., \texttt{"prach\_config\_index=64"}).
+    \item[\textbullet] \textbf{"correct\_param"}: The correct parameter value in workable configuration (e.g., \texttt{"prach\_config\_index=98"}).
+    \item[\textbullet] \textbf{"logs"}: Object with \texttt{"CU"}, \texttt{"DU"}, \texttt{"UE"} arrays of log lines for the error case.
+    \item[\textbullet] \textbf{"network\_config"}: Extracted configuration as a JSON object with \texttt{"gnb\_conf"} and \texttt{"ue\_conf"} subsections (e.g., \texttt{gnb\_conf} includes parameters like \texttt{prach\_config\_index}, \texttt{tdd\_ul\_dl\_configuration\_common}; \texttt{ue\_conf} includes \texttt{imsi}, \texttt{frequency}). Parse it fully, extract relevant parameters, and use for mismatches with logs and \texttt{misconfigured\_param}.
+\end{itemize}
+
+\vspace{1em}
+
+Think step by step, writing down all thoughts as you go, guided by the \texttt{misconfigured\_param} for accurate diagnosis. Follow this structure in your response:
+\begin{enumerate}[1.]
+    \item \textbf{Overall Context and Setup Assumptions}\\
+    Summarize the scenario (e.g., OAI SA mode with \texttt{--rfsim --sa} options), expected flow (e.g., component init $\rightarrow$ F1/NGAP setup $\rightarrow$ UE connection/PRACH $\rightarrow$ RRC/PDU session), and potential issues to look for (e.g., config mismatches in PRACH or SIB encoding, asserts in code, connection failures).\\
+    Parse \texttt{network\_config}'s \texttt{gnb\_conf} and \texttt{ue\_conf}, summarize key parameters (e.g., \texttt{prach\_config\_index} in \texttt{gnb\_conf}), and note initial mismatches with logs or \texttt{misconfigured\_param}.
+    
+    \vspace{1em}
+    \item \textbf{Analyzing CU Logs}\\
+    Break down initialization (e.g., mode confirmation, threads, GTPU/NGAP setup), key events (e.g., AMF connection, F1AP start), and anomalies (e.g., incomplete logs or stalled states). Cross-reference with \texttt{network\_config}'s \texttt{gnb\_conf} where relevant (e.g., AMF IP or GTPU ports).
+    
+    \vspace{1em}
+    \item \textbf{Analyzing DU Logs}\\
+    Focus on PHY/MAC errors (e.g., PRACH config issues, assertions such as ``bad r: L\_ra 139, NCS 209''). Break down initialization (e.g., antenna ports, TDD period), identify crash points, and link findings to \texttt{network\_config}'s \texttt{gnb\_conf} parameters like \texttt{prach\_config\_index}.
+    
+    \vspace{1em}
+    \item \textbf{Analyzing UE Logs}\\
+    Focus on connection attempts (e.g., repeated connect failures to rfsim server). Link observed UE behavior to \texttt{network\_config}'s \texttt{ue\_conf} parameters such as \texttt{frequency} or \texttt{rfsimulator\_serveraddr}.
+    
+    \vspace{1em}
+    \item \textbf{Cross-Component Correlations and Root Cause Hypothesis}\\
+    Correlate timelines (e.g., DU crash prevents rfsim server, causing UE connect fails; CU waits for DU). Use the \texttt{misconfigured\_param} for clues (e.g., known invalid \texttt{prach\_config\_index=64} causing ASN.1 failures). If uncertain about specification details, perform a web search with queries like ``3GPP TS 38.331 prach-ConfigurationIndex range'' or ``OpenAirInterface NR prach\_config\_index validation''. Hypothesize how specific \texttt{network\_config} entries (from \texttt{gnb\_conf}/\texttt{ue\_conf}) produce the observed issues, guided by the \texttt{misconfigured\_param}.
+    
+    \vspace{1em}
+    \item \textbf{Recommendations for Fix and Further Analysis}\\
+    Suggest configuration changes (e.g., set \texttt{prach\_config\_index} to a valid value), debugging steps, and tools to use. Output corrected \texttt{gnb.conf} and \texttt{ue.conf} snippets as JSON objects within the \texttt{network\_config} structure, and include brief comments explaining each change and why it fixes the issue.
+    
+    \vspace{1em}
+    \item \textbf{Limitations}\\
+    Note truncated logs, missing timestamps, or incomplete JSON inputs. If using external tools, call them before finalizing the root cause (for example via a function call placeholder like \verb|<xai:function_call>|). Base hypotheses on 3GPP specs (e.g., TS 38.211 for PRACH) and typical OAI code patterns, while incorporating the advance knowledge implied by the \texttt{misconfigured\_param}.\\
+    \textbf{Important: Output only the reasoning trace.}
+\end{enumerate}
+
+
+\end{tcolorbox}
