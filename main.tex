@@ -34,6 +34,7 @@
         Yao-Cong Dong\IEEEauthorrefmark{1}\IEEEauthorrefmark{4},
         Maria Amparo Canaveras Galdon \IEEEauthorrefmark{2}\IEEEauthorrefmark{3}\IEEEauthorrefmark{4},
         Ray-Guang Cheng\IEEEauthorrefmark{1},
+        Januar Evan Zuriel Banjarnahor\IEEEauthorrefmark{1},
         and
         Edwin K. P. Chong\IEEEauthorrefmark{3}
        \\
@@ -295,35 +296,37 @@ For APPENDIX A:
 
 \subsection{Synthetic Data Generation}
 
-\color{blue}{The goal of Synthetic Data Generation is to construct informative and rigorously structured training samples that enable a LLM to extract knowledge from fault logs , deeply understand the causal relationship between configuration errors and system anomalies, and ultimately output precise parameter remediation suggestions.
+\color{blue}{This step aims to generate a large number of configuration files. These files serve as the basis for E2E testing and log data generation. They also start the synthetic data generation process. This process requires two main inputs:
 
 To achieve this objective, this study designed a three-step pipeline (as shown in the Synthetic Data Generation block of Figure~\ref{LLM_reasoning_framework})
 
 \begin{itemize}
-    \item Configuration Generation and Modification: This involves the establishment of an extensive set of correct and incorrect gNB parameter combinations that serve as the foundation for subsequent testing and data generation activities.
-    \item Error Log Generation in E2E Environment: This entails executing the aforementioned configurations within an end-to-end testing platform, thereby producing authentic system logs corresponding to specific errors.
+    \item Modified Configuration Generation: This involves the establishment of an extensive set of correct and incorrect gNB parameter combinations that serve as the foundation for subsequent testing and data generation activities. During this process, the LLM selects specific parameters to modify, and a separate script then converts those modifications into workable configuration files.
+    \item Error Log Generation in E2E Environment: This entails executing the aforementioned configurations within an end-to-end testing platform, thereby producing authentic system logs corresponding to specific errors. The generated logs include the last 100 lines of outputs from each component; the Central Unit (CU), Distributed Unit (DU), and User Equipment (UE). 
     \item Log Analysis and Reasoning: This utilizes the LLM or an AI Coding Assistant to perform in-depth analysis of the collected logs, inferring the root cause of the fault and accurately identifying the erroneous parameters.
 \end{itemize}
 }
 
 
 
-\subsubsection{Configuration Generation and Modification}
+\subsubsection{Modified Configuration Generation}
 
 \color{blue}{
-The purpose of this step is to generate a large number of configuration files, which serve as the foundation for subsequent E2E testing and log data generation, thereby initiating the synthetic data generation process. The process relies on two key inputs:
+This step is used to generate a large number of configuration files. These generated configuration files will be used in the second phase of E2E testing and will produce log data.
 
-\begin{itemize}
-    \item Workable Configuration File — One or multiple gNB configuration files known to operate correctly, capable of completing PDU session establishment accept and obtaining an IPv4 address, serving as a reliable baseline for LLM-based modifications.
-   \item Configuration Mutation Prompt ~\ref{app:gen_prompt} — A textual instruction guiding the LLM (Large Language Model) to inject specific types of faults or parameter mutations into the configuration. This prompt allows the operator to modify the target network component for mutation by adjusting the \texttt{COMPONENT} in the prompt (this paper uses CU, DU, and UE) and customize the number of faults by adjusting the \texttt{N\_VARIATIONS} in the prompt (this paper recommends using 25).
+\begin{itemize} 
+    \item Workable Configuration - Under these settings, the UE can successfully establish a PDU session and obtain an IPv4 address when running the gNB. And these configuration files will serve as a baseline for the AI coding assistant to make modifications.
+    \item Configuration Mutation Prompt $\ref{app:gen_prompt}$ - Instruct the AI coding assistant on how to create a configuration change set based on available configuration files, including the generated format, tools used, quantity generated, and target components. Users can adjust \texttt{COMPONENT} to select the network element to modify (CU, DU, or UE in this article). Users can also adjust \texttt{N\_VARIATIONS} to control the number of errors generated (this paper recommends 25).
 \end{itemize}
 }
 
 
 
 \color{blue}{
-In the design, the LLM is not required to regenerate the entire configuration. Instead, it outputs only the parameters to be modified and their corresponding values , referred to as the config mutation set (as shown in Table~\ref{table:Definition_of_Config_Mutation_Set}). A post-processing program then automatically generates the modified conf file according to these localized changes. This approach generates realistic configuration errors through random parameter variations, which significantly improves generation efficiency while reducing the likelihood of structural errors during long-sequence generation.
+Traditional manual configuration modifications are not only extremely inefficient but also struggle to cover all possible error combinations. Common rule-based approaches also have limitations, often generating only a small number of fixed error patterns.For the SFT model, we need to exhaustively enumerate errors as much as possible. Therefore, in this phase, we have chosen to utilize the AI Coding Assistant to assist in generating. Moreover, in terms of generation methodology, directly outputting the entire configuration file consumes both tokens and time, especially when the configuration file is large. Longer contexts can easily cause weaker models to hallucinate, produce formatting errors, or generate garbled text. To avoid such situations, we also propose a partial generation approach that further improves efficiency and reduces the likelihood of LLM failures or errors when generating long texts.
 }
+
+
 
 \begin{table}[H]
     \centering
@@ -387,7 +390,8 @@ The process automatically executes the following steps: First, the modified conf
     \item Current Network Component Log Snippet — Provides observations of fault events along with contextual information, such as base station logs, UE events, and packet statistics, allowing the model to identify abnormal patterns. Prior work\cite{rezaei2025fedllmguard} has shown that LLM can understand the semantics and context behind logs, enabling the detection of complex and evolving network anomalies.
     \item Current Network Component Configuration — Presents the complete set of system parameters, including but not limited to gNB settings, frequency bands, power levels, and antenna configurations, allowing the model to compare abnormal and normal configurations and identify potential root causes. The structured and comprehensive configuration data helps the LLM understand the network topology and operational status, providing a foundation for subsequent root cause analysis \cite{sana2025reasoning}.
     \item Misconfigured Parameter — Represents the specific configuration values that actually caused system faults, providing key evidence for the model to learn the causal mapping from misconfiguration to observed fault phenomena. Incorporating clearly labeled error samples in LLM diagnostic training significantly improves anomaly recognition and root cause analysis capabilities. When training data contains specific erroneous settings (e.g., incorrect SSB frequency, AMF/UPF IP, or improper compression algorithms), the model can learn the log features induced by these anomalies, understand their fault causes, and capture parameter-level diagnostic logic during SFT. According to \cite{sana2025reasoning}, models trained with structured error samples (including parameter identity, erroneous value, and causal reasoning trace) increased diagnostic accuracy from 18.85\% to 49.45\% highlighting the critical importance of precisely annotated misconfigurations for enhancing causal reasoning and fault diagnosis capabilities.
-    \item Correct Parameter — Serves as the target for generating remediation recommendations, guiding the LLM to learn causal reasoning from observed faults to corrective actions. Correct configurations are not only used to guide the generation of remediation suggestions but also serve as a reference for validating the effectiveness of model outputs, ensuring that proposed fixes are feasible and reliable in real network environments while avoiding model hallucinations. Network configurations are precise and deterministic—there is no concept of “approximately correct”; each parameter either functions properly or may cause a network fault. As noted in \cite{wang2024netconfeval}, introducing any imprecise target parameters in the training data immediately reduces model performance to 60–70\%. After fine-tuning, accuracy only recovers to over 95\% when the training dataset includes precise correct configurations. By combining correct and erroneous samples, the model can simultaneously learn fault causes and remediation logic, forming an end-to-end self-diagnosis and self-adjustment loop.
+    \item Correct Parameter —
+    % Serves as the target for generating remediation recommendations, guiding the LLM to learn causal reasoning from observed faults to corrective actions. Correct configurations are not only used to guide the generation of remediation suggestions but also serve as a reference for validating the effectiveness of model outputs, ensuring that proposed fixes are feasible and reliable in real network environments while avoiding model hallucinations. Network configurations are precise and deterministic—there is no concept of “approximately correct”; each parameter either functions properly or may cause a network fault. As noted in \cite{wang2024netconfeval}, introducing any imprecise target parameters in the training data immediately reduces model performance to 60–70\%. After fine-tuning, accuracy only recovers to over 95\% when the training dataset includes precise correct configurations. By combining correct and erroneous samples, the model can simultaneously learn fault causes and remediation logic, forming an end-to-end self-diagnosis and self-adjustment loop.
 \end{itemize}
 }
 
