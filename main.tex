@@ -148,7 +148,7 @@ Key ideas:\\
 - This work is different because we leverage the research in reasoning, which has been widely applied to math and code problems, and apply it to network log interpretation and resolution with proper configuration.\\
 }
 
-\color{blue}{Large Language Models (LLMs) possess the capability to understand unstructured text and perform causal reasoning, offering new opportunities for automated network management. They can analyze error messages and system behaviors in event logs, identify potential root causes, and propose actionable parameter adjustments. Recent studies have shown that LLMs can be fine-tuned or guided through prompt engineering to process semi-structured or structured telemetry data. However, direct application of these models to gNodeB log analysis and network control remains underexplored. The approach proposed in this study leverages LLM-generated reasoning traces to transform event logs into structured reasoning processes, enabling automatic generation of configuration recommendations. Unlike existing methods, this work applies techniques from mathematical and code reasoning to network log analysis, providing causal reasoning and actionable suggestions. This approach improves adaptability to unseen errors, reduces human intervention, and offers reliable automation support for dynamic, multi-vendor 5G RAN operations.}
+\color{blue}{Large Language Models (LLMs) possess the capability to understand unstructured text and perform causal reasoning, offering new opportunities for automated network management. They can analyze error messages and system behaviors in event logs, identify potential root causes, and propose actionable parameter adjustments. Recent studies have shown that LLMs can be fine-tuned or guided through prompt engineering to process semi-structured or structured telemetry data. However, direct application of these models to gNodeB log analysis and network control remains underexplored. The approach proposed in this paper leverages LLM-generated reasoning traces to transform event logs into structured reasoning processes, enabling automatic generation of configuration recommendations. Unlike existing methods, this work applies techniques from mathematical and code reasoning to network log analysis, providing causal reasoning and actionable suggestions. This approach improves adaptability to unseen errors, reduces human intervention, and offers reliable automation support for dynamic, multi-vendor 5G RAN operations.}
 
 \color{red}{
 
@@ -219,26 +219,31 @@ Synthetic data generation utilizes a reasoning loop to automatically generate a 
 1. ALL the blocks shown on the figure should be explained. On Fig. 1, you don't have to show the internal blocks of the Management Platform unless needed.
 
 [Johnson:] Done
-
+%%
 2. Please use the {\bf same term you used in the figure} to revise the text shown above. The terms of Error Log, Error conf, Base LLM, Fine-tuned LLM should be mentioned in the text.
 
+[Johnson:] Done, Base LLM and Fine-tuned LLM will mentioned in Supervised Fine Tuning
+%%
 3. Do you input Error Conf to AI Coding Assistant? Or, use AI Coding Assistant to generate Error Conf?
 
 [Johnson] I input Workable configuration and use the AI Coding Assistant to mutate it into an Error Configuration through a Configuration Mutation Prompt.
-
+%%
 4. Remove LLM from the AI Coding Assistant. It's NOT the same as the LLM you showed in the Supervised Fine-tuning block. 
 
-
-For Figures:
-
+[Johnson:] Done
+%%
 5. How do you link your Figs. 2 to 3?
 
 [Johnson]: I will remove the original Figs. 3
-
+%%
 6. Please refer to the other paper to draw your figures. Figs. 2, 3, and 4 are NOT consistent.
 
+[Johnson]: I will remove the original Figs. 3 and 4
+%%
 7. From Fig. 1, the Operator DIDN't connect to RAN. Why do you show RAN on Fig. 5?
 
+[Johnson]: I will remove the original Figs. 5
+%%
 
 8. Please use the SAME term in the text, figure, and APPENDIX A. You should be able to identify the inconsistencies among figures before writing them down. Your figure should be based on your implementation.
 For example, 
@@ -254,6 +259,9 @@ On Fig. 4,
 - I/P to AI Coding Assistant becomes Configuration Mutation Prompt and Workable Configuration Files.
 
 - O/P is Configuration Mutation Set
+
+[Johnson]: I already remove Fig. 4 and confirmed Figure 2 with Amparo.
+
 
 For APPENDIX A:
 
@@ -286,24 +294,15 @@ For APPENDIX A:
 \subsection{Synthetic Data Generation}
 
 \color{blue}{
-To achieve this objective, this study designed a three-module pipeline (as shown in the Synthetic Data Generation block of Figure~\ref{LLM_reasoning_framework})
-
-\begin{itemize}
-    \item Modified Configuration Generation: This module is responsible for generating a large number of configuration files with different variations based on input configuration files, hereinafter referred to as Module-One.
-    \item Error Log Generation in E2E Environment: This module is responsible for executing the configuration file generated by Module One on E2E testing platform and collecting the last 100 lines of log output from each system component (CU, DU, UE), hereinafter referred to as Module-Two.
-    \item Log Analysis and Reasoning: This module is responsible for analyzing logs collected by Module-Two and using the Reasoning LLM to infer root causes of failures and erroneous parameters, hereafter referred to as Module-Three.
-\end{itemize}
-}
-
-
+To achieve this objective, this paper designed a three-module pipeline (as shown in the Synthetic Data Generation block of Figure~\ref{LLM_reasoning_framework})}
 
 \subsubsection{Configuration Generation and Modification}
 
 \color{blue}{
-This step is used to generate a large number of configuration files. These generated configuration files will be used in the second phase of E2E testing and will produce log data.
+This module is responsible for generating a large number of configuration files with different variations based on input configuration files, hereinafter referred to as Module-One.
 
 \begin{itemize} 
-    \item Workable Configuration - Under these settings, the UE can successfully establish a PDU session and obtain an IPv4 address when running the gNB. And these configuration files will serve as a baseline for the AI coding assistant to make modifications.
+    \item Workable Configuration - Under these settings, the UE can successfully establish a packet data unit(PDU) session and obtain an IPv4 address when running the gNB. And these configuration files will serve as a baseline for the AI coding assistant to make modifications.
     \item Configuration Mutation Prompt - Instruct the AI coding assistant on how to create a configuration change set based on available configuration files, including the generated format, tools used, quantity generated, and target components. Users can adjust \texttt{COMPONENT} to select the network element to modify (CU, DU, or UE in this paper). Users can also adjust \texttt{N\_VARIATIONS} to control the number of errors generated (this paper recommends 25), see Appendix \ref{app:gen_prompt} for details.
 \end{itemize}
 }
@@ -311,7 +310,7 @@ This step is used to generate a large number of configuration files. These gener
 Once workable configuration and configuration mutation prompt are entered, the AI coding assistant will generate the modified configuration according to the following process:
 \begin{enumerate}
   \item Analyze input files - The AI coding assistant first analyzes the workable configuration content of the input and determines the parameters that can be modified and their types.
-  \item Generate CMS - The AI coding assistant generates a Config Mutation Set (CMS) based on the understanding in step one. The key structure is shown in Table \ref{table:Definition_of_Config_Mutation_Set} , and the format is shown in output schema in the appendix \ref{app:gen_prompt}.
+  \item Generate CMS - The AI coding assistant generates a config mutation set (CMS) based on the understanding in step one. The key structure is shown in Table \ref{table:Definition_of_Config_Mutation_Set} , and the format is shown in output schema in the appendix \ref{app:gen_prompt}.
   \item Generate modified configuration - Based on the modified\_key and error\_value in the CMS generated in step two, modify the workable configuration to generate modified configuration.
 \end{enumerate}
 }
@@ -344,10 +343,13 @@ Traditional manual configuration modifications are not only extremely inefficien
     \end{tabular}
 \end{table}
 \subsubsection{Error Log Generation in E2E Environment}
+
+This module is responsible for executing the configuration file generated by Module-One on E2E testing platform and collecting the last 100 lines of log output from each system component (CU, DU, UE), hereinafter referred to as Module-Two.
+
 \color{blue}{
 Once the gNB loads and executes the configuration file, it begins continuously outputting a large amount of logs to record detailed information such as system execution status, signaling handover processes, and the operational status of each channel. When gNB get issue, engineers typically analyze these logs to deduce the possible source of the problem. More experienced engineers are often able to identify the cause of the failure more quickly because different error scenarios leave representative error messages in the logs, and these messages are highly correlated with the configuration file currently in use.
 
-This step uses the modified configurations generated during the configuration generation and modification stage as input for RAN deployment and testing. We used OAI RAN and OAI CN as the test platform for this paper. The component definitions and hardware used in the experiment are described in Tables \ref{table:oai_testing_environment} and \ref{table:oai_equiment}. On this test platform, we sequentially execute each modified configuration and record the logs (CU/DU/UE logs) generated by each component during E2E procedure at the gNB and UE. The detailed process is as follows:
+We used OAI RAN and OAI CN as the test platform for this paper. The component definitions and hardware used in the experiment are described in Tables \ref{table:oai_testing_environment} and \ref{table:oai_equiment}. On this test platform, we sequentially execute each modified configuration and record the logs (CU/DU/UE logs) generated by each component during E2E procedure at the gNB and UE. The detailed process is as follows:
 
 \begin{enumerate}
     \item Launch the CU and start recording the CU execution log.
@@ -360,26 +362,6 @@ This step uses the modified configurations generated during the configuration ge
 \end{enumerate}
 
 Finally, we will filter the logs. If there is no "received PDU session establishment accept" in the UE Log, we will consider it as a failure to establish a PDU session and retain it as an error log (e.g., gNB initialization failures, RRC establishment failures, NG Setup failures, and other issues that prevent the UE from successfully establishing a PDU session). These error logs will serve as input for the next stage, Log Analysis and Reasoning, to build the training data for SFT training.
-
-
-
-
-\begin{table}[H]
-    \centering
-    \caption{Server Hardware Configuration}
-    \label{table:oai_equiment}
-    \begin{tabular}{ll}
-    \hline
-    \textbf{Item} & \textbf{Specification} \\
-    \hline
-    Server Model        & Dell PowerEdge R750 \\
-    CPU Model           & Intel Xeon Gold 6326 \\
-    Clock Frequency     & 2.90 GHz \\
-    Logical CPU(s)      & 32 \\
-    \hline
-    \end{tabular}
-\end{table}
-
 
 \begin{table}[H]
     \centering
@@ -401,9 +383,28 @@ Finally, we will filter the logs. If there is no "received PDU session establish
 \end{table}
 
 
+\begin{table}[H]
+    \centering
+    \caption{Server Hardware Configuration}
+    \label{table:oai_equiment}
+    \begin{tabular}{ll}
+    \hline
+    \textbf{Item} & \textbf{Specification} \\
+    \hline
+    Server Model        & Dell PowerEdge R750 \\
+    CPU Model           & Intel Xeon Gold 6326 \\
+    Clock Frequency     & 2.90 GHz \\
+    Logical CPU(s)      & 32 \\
+    \hline
+    \end{tabular}
+\end{table}
+
+}
+
 
 \subsubsection{Log Analysis and Reasoning }
-\color{blue}{For the design of the training data, this study assemble the data into four interrelated components:}
+ This module is responsible for analyzing logs collected by Module-Two and using the Reasoning LLM to infer root causes of failures and erroneous parameters, hereafter referred to as Module-Three.
+\color{blue}{For the design of the training data, this paper assemble the data into four interrelated components:}
 \color{blue}{
 \begin{itemize}
     \item Current Network Component Log Snippet — Provides observations of fault events along with contextual information, such as base station logs, UE events, and packet statistics, allowing the model to identify abnormal patterns. Prior work\cite{rezaei2025fedllmguard} has shown that LLM can understand the semantics and context behind logs, enabling the detection of complex and evolving network anomalies.
