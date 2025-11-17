@@ -14,6 +14,10 @@
 \usepackage{cuted}
 \usepackage{xcolor}
 \usepackage{appendix}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithmicx}
+\usepackage[noend]{algpseudocode} 
 
 \definecolor{lightgray}{rgb}{0.95,0.95,0.95}
 \lstset{
@@ -316,8 +320,18 @@ This step is used to generate a large number of configuration files. These gener
 
 \begin{itemize} 
     \item Workable Configuration - Under these settings, the UE can successfully establish a PDU session and obtain an IPv4 address when running the gNB. And these configuration files will serve as a baseline for the AI coding assistant to make modifications.
-    \item Configuration Mutation Prompt $\ref{app:gen_prompt}$ - Instruct the AI coding assistant on how to create a configuration change set based on available configuration files, including the generated format, tools used, quantity generated, and target components. Users can adjust \texttt{COMPONENT} to select the network element to modify (CU, DU, or UE in this article). Users can also adjust \texttt{N\_VARIATIONS} to control the number of errors generated (this paper recommends 25).
+    \item Configuration Mutation Prompt $\ref{app:gen_prompt}$ - Instruct the AI coding assistant on how to create a configuration change set based on available configuration files, including the generated format, tools used, quantity generated, and target components. Users can adjust \texttt{COMPONENT} to select the network element to modify (CU, DU, or UE in this paper). Users can also adjust \texttt{N\_VARIATIONS} to control the number of errors generated (this paper recommends 25).
 \end{itemize}
+}
+\color{blue}{
+Once workable configuration and configuration mutation prompt are entered, the AI coding assistant will generate the modified configuration according to the following process.
+
+
+\begin{enumerate}
+  \item Analyze input files - The AI coding assistant first analyzes the workable configuration content of the input and determines the parameters that can be modified and their types.
+  \item Generate CMS - The AI coding assistant generates a Config Mutation Set (CMS) based on the understanding in step one. The key structure is shown in Table \ref{table:Definition_of_Config_Mutation_Set} , and the format is shown in output schema the appendix \ref{app:gen_prompt}.
+  \item Generate modified configuration - Based on the modified\_key and error\_value in the CMS generated in step two, modify the workable configuration to generate modified configuration.
+\end{enumerate}
 }
 
 
@@ -325,6 +339,7 @@ This step is used to generate a large number of configuration files. These gener
 \color{blue}{
 Traditional manual configuration modifications are not only extremely inefficient but also struggle to cover all possible error combinations. Common rule-based approaches also have limitations, often generating only a small number of fixed error patterns.For the SFT model, we need to exhaustively enumerate errors as much as possible. Therefore, in this phase, we have chosen to utilize the AI Coding Assistant to assist in generating. Moreover, in terms of generation methodology, directly outputting the entire configuration file consumes both tokens and time, especially when the configuration file is large. Longer contexts can easily cause weaker models to hallucinate, produce formatting errors, or generate garbled text. To avoid such situations, we also propose a partial generation approach that further improves efficiency and reduces the likelihood of LLM failures or errors when generating long texts.
 }
+
 
 
 
@@ -347,7 +362,7 @@ Traditional manual configuration modifications are not only extremely inefficien
     \end{tabular}
 \end{table}
 
-\subsubsection{Error Log Generation in End to End Environment}
+\subsubsection{Error Log Generation in E2E Environment}
 \color{blue}{
 This step aims to systematically generate authentic and traceable fault logs by deploying faulty configurations within a controlled E2E testing platform, serving as a crucial input for LLM training. In real-world 5G network operations, the Operator (whether human or AI) resides at the management platform level (e.g., SMO/OSS) and utilizes the standardized O1 interface and protocols like SFTP to monitor and control the underlying O-RAN Network Functions, without directly accessing the RAN components. However, to construct training samples with explicit causal relationships, we must deploy the erroneous configurations within an E2E environment capable of execution and fault reproduction.
 }
