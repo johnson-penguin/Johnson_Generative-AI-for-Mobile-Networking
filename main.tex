@@ -42,8 +42,6 @@
         and
         Edwin K. P. Chong\IEEEauthorrefmark{3}
        \\
-%        Fata Falih Hilmi\IEEEauthorrefmark{4},
-%        Daffa Rizkyandri\IEEEauthorrefmark{5}
   }
     \IEEEauthorblockA{\IEEEauthorrefmark{1}
     Dept. of Electronic and Computer Engineering, National Taiwan University of Science and Technology, Taiwan
@@ -54,7 +52,7 @@
 Colorado State University, USA  \\
     }
     \IEEEauthorblockA{\IEEEauthorrefmark{4}
-Equal Contribution  \\
+These authors contributed equally to this work.  \\
     }
     Email: crg@mail.ntust.edu.tw, acanaveras@nvidia.com 
     }
@@ -69,31 +67,16 @@ Equal Contribution  \\
 
 
 \begin{abstract}
-\color{red}{
-Let's start everything from the beginning. Hide old text and focus on the issues summarized in the meeting minutes.
-
-From 9/24:
-Drop the RAG part and focus on the pipeline for obtaining SFT training data and on comparing model performance before and after fine-tuning.
-
-From 9/24:
-The study highlights the gap that open-source LLMs currently lack the capability to handle complex network troubleshooting and configuration. To address this, it proposes a dual-core approach: automated dataset creation and advanced model training.
-
-From 10/8:
-Add the Synthetic Data Generation section to the paper.
-Add three architecture diagrams:
-(1) Overall pipeline for error and reasoning generation.
-(2) Error log generation architecture (injecting confs from the previous pipeline into the system to capture logs).
-(3) Architecture for reasoning trace generation.
-}
-\color{magenta}{
-[amparo] Set of ideas in the abstract
-Analyzing and understanding network s for root cause analysis RCA is very time-consuming and a key point to automate in the path for autonomous networks. 
-Network Logs are text-based and good candidates to leverage the language understanding capabilities of LLMS. However, the traditional Q\&A nature of LLMs lacks of capabilities to perform truly root cause analysis and change configuration proposal 
-Recent research in the LLM reasoning allow llms to follow a series of logical thinking that emulates human root cause analysis. 
-These  skills 
-In this paper we propose a framework to train LLMs how to think and reason to analyze network logs and propose configurations that will solve the issue
-
-
+Analyzing and understanding networks for root cause analysis (RCA) is a time-consuming process and a key point to automate on the path toward autonomous networks.
+%Analyzing and understanding networks for root cause analysis (RCA) is very time-consuming and a key point to automate in the path for autonomous networks. 
+Network logs are text-based and good candidates for leveraging the language-understanding capabilities of large language models (LLMs). 
+% Network Logs are text-based and good candidates to leverage the language understanding capabilities of LLMS. 
+However, the traditional query and answer (Q\&A) nature of LLMs lacks the human ability to analyze root causes and generate configuration proposals. 
+% However, the traditional Q\&A nature of LLMs lacks of capabilities to perform truly root cause analysis and change configuration proposal. 
+Recent research in LLM reasoning allows LLMs to emulate human root cause analysis following a series of logical thinking steps.
+% Recent research in the LLM reasoning allow llms to follow a series of logical thinking that emulates human root cause analysis. 
+In this paper, we propose an LLM reasoning framework for automatically adjusting gNB parameters using synthetic training data. We utilized the proposed framework to automatically generate synthetic training data; train LLMs to think and reason using supervised fine-tuning (SFT); and propose configuration parameters by analyzing network logs. Finally, we utilized open-source Service Management and Orchestration (SMO) and OpenAirInterface (OAI) gNB to verify the feasibility of the proposed approach. 
+%In this paper we propose a framework to train LLMs how to think and reason to analyze network logs and propose configurations that will solve the issue
 }
 
 
@@ -203,7 +186,9 @@ Section~\ref{Conclusions} provides the concluding remarks.
 
 \section{System Model}\label{SystemModel}
 
-\color{black}{Figure~\ref{model} shows the system model considered in this paper. The system consists of three main actors: an operator, a management platform, and an open and disaggregated RAN. The operator is a person or machine that has RAN-specific domain knowledge of terminology and log semantics to perform root cause analysis. The operator utilizes a management platform to monitor and control the RAN. The management platform is an Operations Support System (OSS) used in traditional telecom networks or a Service Management and Orchestration (SMO) defined by the O-RAN ALLIANCE. The management platform is used to configure and collect performance metrics from the RAN. The disaggregated RAN is accessible through a standard open interface (e.g., O1 interface) following the standard YANG model defined by 3GPP \cite{} to ensure interoperability. The RAN components (e.g., central units, CUs; distributed units, DUs; and/or radio units, RUs) in the disaggregated RAN require proper setting of configurable parameters. Misconfigurations may lead to error logs or degraded KPIs.}
+Figure~\ref{model} shows a high-level architecture of an O-RAN management and control system considered in this paper. The system comprises three main components: an operator, a management platform, and an open and disaggregated RAN. 
+The operator could be a human, a machine, or an AI model that has RAN-specific domain knowledge of terminology and log semantics to interact with the network and perform root cause analysis. The operator communicates with the underly management platform through the operator interface or management application interfaces (APIs) to monitor and control the RAN. The management platform could be an Operations Support System (OSS) used in traditional telecom networks or a Service Management and Orchestration (SMO) defined by the O-RAN ALLIANCE. The management platform utilizes the standard open interface (e.g., O1 interface) following the standard YANG model defined by 3GPP \cite{} to configure the O-RAN network functions. 
+With the standard open interface, error logs or degraded key performance metrics (KPIs) resulting from misconfigurations of the O-RAN network functions can be automatically reported to the management platform.
 
 \begin{figure}[h]
 \centering
@@ -212,7 +197,7 @@ Section~\ref{Conclusions} provides the concluding remarks.
   \label{model}
 \end{figure}
 
-Without loss of generality, we consider the simple case in which the operator analyzes error logs and recommends network configurations for the RAN components. In this paper, we use the following metrics to evaluate the performance of the operator, considering both linguistic accuracy and operational results of the network \cite{}.
+Without loss of generality, we consider the simple case in which the operator analyzes error logs and recommends network configurations for the O-RAN network functions. In this paper, we use the following metrics \cite{} to evaluate the performance of the operator by considering both linguistic accuracy and operational results of the network.
 
 
 \color{red}{
@@ -300,14 +285,13 @@ For APPENDIX A:
 
 \subsection{Synthetic Data Generation}
 
-\color{blue}{This step aims to generate a large number of configuration files. These files serve as the basis for E2E testing and log data generation. They also start the synthetic data generation process. This process requires two main inputs:
-
-To achieve this objective, this study designed a three-step pipeline (as shown in the Synthetic Data Generation block of Figure~\ref{LLM_reasoning_framework})
+\color{blue}{
+To achieve this objective, this study designed a three-module pipeline (as shown in the Synthetic Data Generation block of Figure~\ref{LLM_reasoning_framework})
 
 \begin{itemize}
-    \item Modified Configuration Generation: This involves the establishment of an extensive set of correct and incorrect gNB parameter combinations that serve as the foundation for subsequent testing and data generation activities. During this process, the LLM selects specific parameters to modify, and a separate script then converts those modifications into workable configuration files.
-    \item Error Log Generation in E2E Environment: This entails executing the aforementioned configurations within an end-to-end testing platform, thereby producing authentic system logs corresponding to specific errors. The generated logs include the last 100 lines of outputs from each component; the Central Unit (CU), Distributed Unit (DU), and User Equipment (UE). 
-    \item Log Analysis and Reasoning: This utilizes the LLM or an AI Coding Assistant to perform in-depth analysis of the collected logs, inferring the root cause of the fault and accurately identifying the erroneous parameters.
+    \item Modified Configuration Generation: This module is responsible for generating a large number of configuration files with different variations based on input configuration files, hereinafter referred to as Module-One.
+    \item Error Log Generation in E2E Environment: This module is responsible for executing the configuration file generated by Module One on E2E testing platform and collecting the last 100 lines of log output from each system component (CU, DU, UE), hereinafter referred to as Module-Two.
+    \item Log Analysis and Reasoning: This module is responsible for analyzing logs collected by Module-Two and using the Reasoning LLM to infer root causes of failures and erroneous parameters, hereafter referred to as Module-Three.
 \end{itemize}
 }
 
@@ -320,16 +304,14 @@ This step is used to generate a large number of configuration files. These gener
 
 \begin{itemize} 
     \item Workable Configuration - Under these settings, the UE can successfully establish a PDU session and obtain an IPv4 address when running the gNB. And these configuration files will serve as a baseline for the AI coding assistant to make modifications.
-    \item Configuration Mutation Prompt $\ref{app:gen_prompt}$ - Instruct the AI coding assistant on how to create a configuration change set based on available configuration files, including the generated format, tools used, quantity generated, and target components. Users can adjust \texttt{COMPONENT} to select the network element to modify (CU, DU, or UE in this paper). Users can also adjust \texttt{N\_VARIATIONS} to control the number of errors generated (this paper recommends 25).
+    \item Configuration Mutation Prompt - Instruct the AI coding assistant on how to create a configuration change set based on available configuration files, including the generated format, tools used, quantity generated, and target components. Users can adjust \texttt{COMPONENT} to select the network element to modify (CU, DU, or UE in this paper). Users can also adjust \texttt{N\_VARIATIONS} to control the number of errors generated (this paper recommends 25), see Appendix \ref{app:gen_prompt} for details.
 \end{itemize}
 }
 \color{blue}{
-Once workable configuration and configuration mutation prompt are entered, the AI coding assistant will generate the modified configuration according to the following process.
-
-
+Once workable configuration and configuration mutation prompt are entered, the AI coding assistant will generate the modified configuration according to the following process:
 \begin{enumerate}
   \item Analyze input files - The AI coding assistant first analyzes the workable configuration content of the input and determines the parameters that can be modified and their types.
-  \item Generate CMS - The AI coding assistant generates a Config Mutation Set (CMS) based on the understanding in step one. The key structure is shown in Table \ref{table:Definition_of_Config_Mutation_Set} , and the format is shown in output schema the appendix \ref{app:gen_prompt}.
+  \item Generate CMS - The AI coding assistant generates a Config Mutation Set (CMS) based on the understanding in step one. The key structure is shown in Table \ref{table:Definition_of_Config_Mutation_Set} , and the format is shown in output schema in the appendix \ref{app:gen_prompt}.
   \item Generate modified configuration - Based on the modified\_key and error\_value in the CMS generated in step two, modify the workable configuration to generate modified configuration.
 \end{enumerate}
 }
@@ -337,7 +319,7 @@ Once workable configuration and configuration mutation prompt are entered, the A
 
 
 \color{blue}{
-Traditional manual configuration modifications are not only extremely inefficient but also struggle to cover all possible error combinations. Common rule-based approaches also have limitations, often generating only a small number of fixed error patterns.For the SFT model, we need to exhaustively enumerate errors as much as possible. Therefore, in this phase, we have chosen to utilize the AI Coding Assistant to assist in generating. Moreover, in terms of generation methodology, directly outputting the entire configuration file consumes both tokens and time, especially when the configuration file is large. Longer contexts can easily cause weaker models to hallucinate, produce formatting errors, or generate garbled text. To avoid such situations, we also propose a partial generation approach that further improves efficiency and reduces the likelihood of LLM failures or errors when generating long texts.
+Traditional manual configuration modifications are not only extremely inefficient but also struggle to cover all possible error combinations. Common rule-based approaches also have limitations, often generating only a small number of fixed error patterns.For the SFT model, we need to exhaustively enumerate errors as much as possible. Therefore, in this phase, we have chosen to utilize the AI coding assistant to assist in generating. Moreover, in terms of generation methodology, directly outputting the entire configuration file consumes both tokens and time, especially when the configuration file is large. Longer contexts can easily cause weaker models to hallucinate, produce formatting errors, or generate garbled text. To avoid such situations, we also propose a partial generation approach that further improves efficiency and reduces the likelihood of LLM failures or errors when generating long texts.
 }
 
 
@@ -361,10 +343,9 @@ Traditional manual configuration modifications are not only extremely inefficien
         \hline
     \end{tabular}
 \end{table}
-
 \subsubsection{Error Log Generation in E2E Environment}
 \color{blue}{
-Once the gNB loads and executes the configuration file, it begins continuously outputting a large amount of logs to record detailed information such as system execution status, signaling handover processes, and the operational status of each channel. When the gNB malfunctions, engineers typically analyze these logs to deduce the possible source of the problem. More experienced engineers are often able to identify the cause of the failure more quickly because different error scenarios leave representative error messages in the logs, and these messages are highly correlated with the configuration file currently in use.
+Once the gNB loads and executes the configuration file, it begins continuously outputting a large amount of logs to record detailed information such as system execution status, signaling handover processes, and the operational status of each channel. When gNB get issue, engineers typically analyze these logs to deduce the possible source of the problem. More experienced engineers are often able to identify the cause of the failure more quickly because different error scenarios leave representative error messages in the logs, and these messages are highly correlated with the configuration file currently in use.
 
 This step uses the modified configurations generated during the configuration generation and modification stage as input for RAN deployment and testing. We used OAI RAN and OAI CN as the test platform for this paper. The component definitions and hardware used in the experiment are described in Tables \ref{table:oai_testing_environment} and \ref{table:oai_equiment}. On this test platform, we sequentially execute each modified configuration and record the logs (CU/DU/UE logs) generated by each component during E2E procedure at the gNB and UE. The detailed process is as follows:
 
@@ -418,6 +399,7 @@ Finally, we will filter the logs. If there is no "received PDU session establish
         \hline
     \end{tabular}
 \end{table}
+
 
 
 \subsubsection{Log Analysis and Reasoning }
