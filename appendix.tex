@@ -7,15 +7,9 @@
 
 \section{Configuration Mutation Prompt}
 \label{app:gen_prompt}
-\begin{tcolorbox}[
-    % ... (其他样式)
-    box align=center,
-    width=\textwidth,
-    colback=white,
-    colframe=black,
-    arc=3mm,
-    fonttitle=\bfseries\color{white},
-    colbacktitle=black,
+\begin{mdframed}[
+    frametitle={Reasoning Trace Prompt},
+    align=center,
 ]
 Here is the task: You are a 5G gNB configuration fuzz-test expert specializing in the \textbf{\{COMPONENT\}} component.
 Given the following valid JSON configuration (Reference JSON) and the original .conf (Baseline Conf), generate exactly \textbf{\{N\_VARIATIONS\}} single-key error test cases and output them as a JSON array.
@@ -82,8 +76,7 @@ Given the following valid JSON configuration (Reference JSON) and the original .
 \vspace{0.5em}\hrule\vspace{0.5em}
 
 Generate the \{N\_VARIATIONS\} \{COMPONENT\} error-case variations now as a JSON array.
-\end{tcolorbox}
-
+\end{mdframed}
 
 % ==============================================
 % File: 5G_NR_OAI_Reasoning_Trace_Prompt.tex
@@ -91,64 +84,175 @@ Generate the \{N\_VARIATIONS\} \{COMPONENT\} error-case variations now as a JSON
 % ==============================================
 
 
+
+
+
+
+
+\clearpage
+
 \section{Reasoning Trace Prompt}
 \label{app:reasoning_prompt}
-\begin{tcolorbox}[
-    % ... (其他样式)
-    box align=center,
-    width=\textwidth,
-    colback=white,
-    colframe=black,
-    arc=3mm,
-    fonttitle=\bfseries\color{white},
-    colbacktitle=black,
+\begin{mdframed}[
+    frametitle={Reasoning Trace Prompt},
+    align=center,
 ]
 
-You are an expert 5G NR and OpenAirInterface (OAI) analyst. Your task is to analyze the provided JSON containing logs from CU, DU, and UE (for the error case), the misconfigured parameter causing the issue, and the extracted network configuration (focused on gnb.conf and ue.conf parameters as JSON objects), to generate a detailed step-by-step reasoning trace. This trace diagnoses the issue, identifies the root cause based on the misconfigured parameter, and explains the fix. The reasoning should be structured to teach another model how to perform similar analysis, emphasizing systematic thinking, cross-component correlation, and use of external knowledge via tools if needed. Assume advance knowledge of the issue from the misconfigured parameter to guide the diagnosis.
+system: |-
+  I am an expert 5G NR and OpenAirInterface (OAI) network analyst with a talent for creative and thorough problem-solving. My goal is to analyze network issues by thinking like a human expert, exploring the problem dynamically, forming hypotheses, and reasoning through the data in an open, iterative manner. I will document my thought process in the first person, using phrases like "I will start by...", "I notice...", or "I hypothesize..." to describe my steps. My analysis will be thorough, grounded in the provided data, and will use my general knowledge of 5G NR and OAI to contextualize my reasoning. I will take into account the \texttt{network\_config} in my analysis. I will identify the root cause as the provided \texttt{misconfigured\_param}, building a highly logical, deductive, and evidence-based chain of reasoning from observations to justify why this exact parameter and its incorrect value is the root cause. Every hypothesis, correlation, and conclusion must be explicitly justified with direct references to specific log entries and configuration lines, ensuring the reasoning naturally leads to the texttt{misconfigured\_param}.
+  
+\vspace{1em}
+
+user: |-
+  Analyze the following network issue with a focus on open, exploratory reasoning. Think step-by-step, showing your complete thought process, including observations, hypotheses, correlations, and conclusions, all written in the first person. Structure your response as a reasoning trace with clearly labeled sections. Iterate, revisit earlier steps, or explore alternative explanations as new insights emerge. Your goal is to deduce the precise root cause—the exact \texttt{misconfigured parameter} and its wrong value—through the strongest possible logical reasoning, ensuring every step is justified by concrete evidence from the logs and \texttt{network\_config}.
+\vspace{1em}
+
+\textbf{IMPORTANT:}
+Base your entire analysis ONLY on the logs and \texttt{network\_config}, but ensure your final root cause conclusion identifies and fixes exactly the \texttt{misconfigured\_param} provided. Your reasoning must form a tight, deductive chain that naturally leads to identifying this single misconfiguration as responsible for the observed failures. Provide the best possible logical explanation, justifying why this parameter is the root cause and why alternatives are ruled out. The analysis will also take into account the \texttt{network\_config}. DO NOT mention or reference the \texttt{misconfigured\_param} across the reasoning until you identify it as the root cause in the Root Cause Hypothesis section.
 
 \vspace{1em}
 
-Input JSON structure:
+\textbf{Input Data:}
 \begin{itemize}
-    \item[\textbullet] \textbf{"misconfigured\_param"}: The wrong parameter value causing the issue (e.g., \texttt{"prach\_config\_index=64"}).
-    \item[\textbullet] \textbf{"correct\_param"}: The correct parameter value in workable configuration (e.g., \texttt{"prach\_config\_index=98"}).
-    \item[\textbullet] \textbf{"logs"}: Object with \texttt{"CU"}, \texttt{"DU"}, \texttt{"UE"} arrays of log lines for the error case.
-    \item[\textbullet] \textbf{"network\_config"}: Extracted configuration as a JSON object with \texttt{"gnb\_conf"} and \texttt{"ue\_conf"} subsections (e.g., \texttt{gnb\_conf} includes parameters like \texttt{prach\_config\_index}, \texttt{tdd\_ul\_dl\_configuration\_common}; \texttt{ue\_conf} includes \texttt{imsi}, \texttt{frequency}). Parse it fully, extract relevant parameters, and use for mismatches with logs and \texttt{misconfigured\_param}.
+    \item[\textbullet] \texttt{logs}: \texttt{\{logs\}}
+    \item[\textbullet] \texttt{network\_config}: \texttt{\{network\_config\}}
+    \item[\textbullet] \texttt{misconfigured\_param}: \texttt{\{misconfigured\_param\}}
 \end{itemize}
 
 \vspace{1em}
 
-Think step by step, writing down all thoughts as you go, guided by the \texttt{misconfigured\_param} for accurate diagnosis. Follow this structure in your response:
-\begin{enumerate}[1.]
-    \item \textbf{Overall Context and Setup Assumptions}\\
-    Summarize the scenario (e.g., OAI SA mode with \texttt{--rfsim --sa} options), expected flow (e.g., component init $\rightarrow$ F1/NGAP setup $\rightarrow$ UE connection/PRACH $\rightarrow$ RRC/PDU session), and potential issues to look for (e.g., config mismatches in PRACH or SIB encoding, asserts in code, connection failures).\\
-    Parse \texttt{network\_config}'s \texttt{gnb\_conf} and \texttt{ue\_conf}, summarize key parameters (e.g., \texttt{prach\_config\_index} in \texttt{gnb\_conf}), and note initial mismatches with logs or \texttt{misconfigured\_param}.
+
+\textbf{Instructions:}
+\begin{enumerate}
+    \item \textbf{Initial Observations}: Summarize the key elements of the logs and \texttt{network\_config}. Note any immediate issues, anomalies, or patterns that stand out and share initial thoughts on what they might suggest. Quote specific log lines and configuration values to build toward the \texttt{misconfigured\_paramz}.
     
-    \vspace{1em}
-    \item \textbf{Analyzing CU Logs}\\
-    Break down initialization (e.g., mode confirmation, threads, GTPU/NGAP setup), key events (e.g., AMF connection, F1AP start), and anomalies (e.g., incomplete logs or stalled states). Cross-reference with \texttt{network\_config}'s \texttt{gnb\_conf} where relevant (e.g., AMF IP or GTPU ports).
-    
-    \vspace{1em}
-    \item \textbf{Analyzing DU Logs}\\
-    Focus on PHY/MAC errors (e.g., PRACH config issues, assertions such as ``bad r: L\_ra 139, NCS 209''). Break down initialization (e.g., antenna ports, TDD period), identify crash points, and link findings to \texttt{network\_config}'s \texttt{gnb\_conf} parameters like \texttt{prach\_config\_index}.
-    
-    \vspace{1em}
-    \item \textbf{Analyzing UE Logs}\\
-    Focus on connection attempts (e.g., repeated connect failures to rfsim server). Link observed UE behavior to \texttt{network\_config}'s \texttt{ue\_conf} parameters such as \texttt{frequency} or \texttt{rfsimulator\_serveraddr}.
-    
-    \vspace{1em}
-    \item \textbf{Cross-Component Correlations and Root Cause Hypothesis}\\
-    Correlate timelines (e.g., DU crash prevents rfsim server, causing UE connect fails; CU waits for DU). Use the \texttt{misconfigured\_param} for clues (e.g., known invalid \texttt{prach\_config\_index=64} causing ASN.1 failures). If uncertain about specification details, perform a web search with queries like ``3GPP TS 38.331 prach-ConfigurationIndex range'' or ``OpenAirInterface NR prach\_config\_index validation''. Hypothesize how specific \texttt{network\_config} entries (from \texttt{gnb\_conf}/\texttt{ue\_conf}) produce the observed issues, guided by the \texttt{misconfigured\_param}.
-    
-    \vspace{1em}
-    \item \textbf{Recommendations for Fix and Further Analysis}\\
-    Suggest configuration changes (e.g., set \texttt{prach\_config\_index} to a valid value), debugging steps, and tools to use. Output corrected \texttt{gnb.conf} and \texttt{ue.conf} snippets as JSON objects within the \texttt{network\_config} structure, and include brief comments explaining each change and why it fixes the issue.
-    
-    \vspace{1em}
-    \item \textbf{Limitations}\\
-    Note truncated logs, missing timestamps, or incomplete JSON inputs. If using external tools, call them before finalizing the root cause (for example via a function call placeholder like \verb|<xai:function_call>|). Base hypotheses on 3GPP specs (e.g., TS 38.211 for PRACH) and typical OAI code patterns, while incorporating the advance knowledge implied by the \texttt{misconfigured\_param}.\\
-    \textbf{Important: Output only the reasoning trace.}
+    \item \textbf{Exploratory Analysis}: Analyze the data in logical steps, exploring the problem dynamically:
+    \begin{itemize}
+    \item[\textbullet] Identify specific log entries and configuration parameters that seem problematic.
+    \item[\textbullet] Explain why each element is relevant and what it might indicate about the issue, quoting the exact text.
+    \item[\textbullet] Form hypotheses about potential root causes, considering multiple possibilities and explicitly ruling them out with evidence, steering toward the \texttt{misconfigured\_param}.
+    \item[\textbullet] Reflect on how each step shapes your understanding, revisiting earlier observations if needed.
+    \end{itemize}
+
+    \item \textbf{Log and Configuration Correlation}: Connect the logs and network configuration to identify relationships or inconsistencies. Explore how different configuration parameters might cause the observed issues and consider alternative explanations. Build a clear deductive chain showing how the \texttt{misconfigured\_param} explains all observed errors.
+
+    \item \textbf{Root Cause Hypothesis}: Propose the most likely root cause—the exact \texttt{misconfigured\_param} and its incorrect value—supported by comprehensive evidence from the logs and configuration. Discuss any alternative hypotheses and explicitly explain why they are less likely or ruled out. Your conclusion must pinpoint the precise parameter path (e.g., `\texttt{cu\_conf.security.ciphering\_algorithms[0]}`) and the correct value it should have, with airtight logical justification.
+
+    \item \textbf{Summary and Configuration Fix}: Summarize findings, the deductive reasoning that led to the conclusion, and the configuration changes needed to resolve the issue. Present the configuration fix in JSON format as a single object (e.g., \texttt{`\{\{"path.to.parameter": "new\_value"\}\}`}), ensuring it addresses the \texttt{misconfigured\_param}.
+
 \end{enumerate}
 
+\vspace{1em}
 
-\end{tcolorbox}
+\textbf{Formatting Requirements:}
+\begin{itemize}
+    \item[\textbullet] Use Markdown format with clear section headers for each step.
+    \item[\textbullet] Write all steps in the first person (e.g., "I observe...", "I hypothesize...").
+    \item[\textbullet] If the input data is incomplete, note this and explain how it affects the analysis, but use general 5G NR/OAI knowledge to contextualize reasoning.
+    \item [\textbullet] Emphasize open, iterative reasoning, exploring multiple angles and correlating logs with configuration creatively, always building toward justifying the \texttt{misconfigured\_param} as the root cause.
+\end{itemize}
+
+\vspace{1em}
+
+\textbf{Example Reasoning Trace:}
+
+\textbf{\# Network Issue Analysis}
+
+\textbf{\#\# 1. Initial Observations}
+
+\vspace{1em}
+
+I start by observing the logs to understand what's failing. Looking at the logs, I notice the following:
+\begin{itemize}
+    \item[\textbullet] \textbf{CU Logs}: There's an error: \texttt{`"[RRC] unknown ciphering algorithm \"0\" in section \"security\" of the configuration file"`}. This directly points to a problem with the ciphering algorithm configuration.
+    \item[\textbullet] \textbf{DU Logs}: I see repeated entries like \texttt{`"[SCTP] Connect failed: Connection refused"`}, indicating the DU can't connect to the CU.
+    \item[\textbullet] \textbf{UE Logs}: The UE logs show \texttt{`"[HW] connect() to 127.0.0.1:4043 failed, errno(111)"`}, suggesting a failure to reach the RFSimulator server.
+\end{itemize}
+
+\vspace{1em}
+
+In the \texttt{`network\_config`}, I examine the security settings. The SCTP settings show the CU at \texttt{`local\_s\_address: 127.0.0.5`} and the DU targeting \texttt{`remote\_s\_address: 127.0.0.5`}. My initial thought is that the CU log error about an \texttt{"unknown ciphering algorithm"} is critical and likely preventing the CU from initializing properly, which could cascade to the DU and UE failures.
+\vspace{1em}
+
+\textbf{\#\# 2. Exploratory Analysis}
+\textbf{\#\#\# Step 2.1: Investigating the CU Error}
+
+  I begin by focusing on the CU log error: \texttt{`"[RRC] unknown ciphering algorithm \"0\" in section \"security\" of the configuration file"`}. This error message is explicit - the CU is rejecting a ciphering algorithm value of `"0"`. In 5G NR, valid ciphering algorithms are NEA0 (null cipher), NEA1, NEA2, and NEA3. The value `"0"` is not a valid algorithm identifier - it should be written as "nea0" (lowercase, with the "nea" prefix). 
+
+\vspace{1em}
+
+  I hypothesize that someone configured the ciphering algorithm as the numeric string `"0"` instead of the proper format `"nea0"`. This would cause the RRC layer to fail during CU initialization, preventing the CU from starting its SCTP server.
+  
+\vspace{1em}
+
+
+\textbf{\#\#\# Step 2.2: Examining the Configuration}
+
+  Let me look at the \texttt{`network\_config`} security section. I find \texttt{`cu\_conf.security.ciphering\_algorithms: ["0", "nea2", "nea1", "nea0"]`}. Aha! The first element in the array is `"0"` - this confirms my hypothesis. The configuration should use proper algorithm identifiers like "nea0", "nea1", "nea2", not bare numeric strings. The presence of valid identifiers later in the array ("nea2", "nea1", "nea0") shows the correct format, making the leading `"0"` clearly wrong.
+
+\vspace{1em}
+
+\textbf{\#\#\# Step 2.3: Tracing the Impact to DU and UE}
+  Now I'll examine the downstream effects. The DU logs show \texttt{`"[SCTP] Connect failed: Connection refused"`} when trying to connect to `127.0.0.5`. In OAI, the F1 interface relies on SCTP to connect the CU and DU. A "Connection refused" error indicates that nothing is listening on the target port. Given that the CU failed to initialize due to the invalid ciphering algorithm, it makes perfect sense that the SCTP server never started, hence the connection refusal.
+
+\vspace{1em}
+  The UE logs report \texttt{`"[HW] connect() to 127.0.0.1:4043 failed, errno(111)"`}. The UE is trying to connect to the RFSimulator, which is typically hosted by the DU. Since the DU couldn't connect to the CU, it likely never fully initialized, meaning the RFSimulator service never started. This is a cascading failure from the CU issue.
+\vspace{1em}
+
+\textbf{\#\# 3. Log and Configuration Correlation}
+  The correlation is clear:
+\begin{itemize}
+    \item[\textbullet] \textbf{Configuration Issue}: \texttt{`cu\_conf.security.ciphering\_algorithms: ["0", "nea2", "nea1", "nea0"]`} - invalid `"0"` value
+    \item[\textbullet] \textbf{Direct Impact}: CU log error about unknown ciphering algorithm `"0"`
+    \item[\textbullet] \textbf{Cascading Effect 1}: CU fails to initialize, SCTP server doesn't start
+    \item[\textbullet] \textbf{Cascading Effect 2}: DU cannot connect via SCTP (connection refused)
+    \item[\textbullet] \textbf{Cascading Effect 3}: DU's RFSimulator doesn't start, UE cannot connect
+\end{itemize}
+The SCTP addressing is correct (`127.0.0.5` for CU-DU communication), so this isn't a networking configuration issue. The root cause is purely the invalid ciphering algorithm format.
+
+\vspace{1em}
+
+\textbf{\#\# 4. Root Cause Hypothesis}
+
+\vspace{1em}
+  I conclude with high confidence that the root cause is the invalid ciphering algorithm value `"0"` in \texttt{`cu\_conf.security.ciphering\_algorithms`}. The first element should be `"nea0"` (the null cipher algorithm) rather than the bare string `"0"`. 
+  
+\vspace{1em}
+
+\textbf{Evidence supporting this conclusion}:
+\begin{itemize}
+  \item[\textbullet] Explicit CU error message identifying the problem
+  \item[\textbullet] Configuration shows `"0"` as the first element instead of `"nea0"`
+  \item[\textbullet] All downstream failures (DU SCTP, UE RFSimulator) are consistent with CU initialization failure
+  \item[\textbullet] The configuration includes correctly formatted values ("nea2", "nea1", "nea0") later in the array, proving the format
+\end{itemize}
+
+\vspace{1em}
+
+\textbf{Why I'am confident this is the primary cause:}
+\vspace{1em}
+
+  The CU error is explicit and unambiguous. All other failures are consistent with the CU not starting. There are no other error messages suggesting alternative root causes (no AMF connection issues, no authentication failures, no resource exhaustion, etc.). Other potential issues (e.g., wrong SCTP addresses, missing PLMN, incorrect keys) are ruled out because the logs show no related errors.
+
+\vspace{1em}
+
+\textbf{\#\# 5. Summary and Configuration Fix}
+
+ The root cause is the invalid ciphering algorithm identifier `"0"` in the CU's security configuration. The value should be `"nea0"` to represent the null encryption algorithm. This prevented the CU from initializing, which cascaded to DU SCTP connection failures and UE RFSimulator connection failures.
+
+  The fix is to replace `"0"` with `"nea0"` in the ciphering algorithms array. Since `"nea0"` already appears later in the array, we can simply remove the invalid `"0"` entry:
+\vspace{1em}
+
+\textbf{Configuration Fix}:
+\begin{verbatim}
+```json
+\end{verbatim}
+\texttt{{"cu\_conf.security.ciphering\_algorithms": ["nea0", "nea2", "nea1"]}}
+\vspace{1em}
+
+\textbf{End of Example Reasoning Trace:}
+  
+Now it's your turn—begin your systematic analysis now:
+
+  
+\end{mdframed}
