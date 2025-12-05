@@ -1,9 +1,3 @@
-% =============================================
-% 文件名: appendix.tex
-% 描述: 包含附录内容，包括 Fuzz Test Prompt 的定义
-% =============================================
-
-% 确保在 main.tex 中正确加载了 tcolorbox 和 listings 宏包
 
 \section{Configuration Mutation Prompt}
 \label{app:gen_prompt}
@@ -90,7 +84,6 @@ Generate the \{N\_VARIATIONS\} \{COMPONENT\} error-case variations now as a JSON
 
 
 \clearpage
-
 \section{Reasoning Trace Prompt}
 \label{app:reasoning_prompt}
 \begin{mdframed}[
@@ -166,15 +159,15 @@ I start by observing the logs to understand what's failing. Looking at the logs,
 \begin{itemize}
     \item[\textbullet] \textbf{CU Logs}: There's an error: \texttt{`"[RRC] unknown ciphering algorithm \"0\" in section \"security\" of the configuration file"`}. This directly points to a problem with the ciphering algorithm configuration.
     \item[\textbullet] \textbf{DU Logs}: I see repeated entries like \texttt{`"[SCTP] Connect failed: Connection refused"`}, indicating the DU can't connect to the CU.
-    \item[\textbullet] \textbf{UE Logs}: The UE logs show \texttt{`"[HW] connect() to 127.0.0.1:4043 failed, errno(111)"`}, suggesting a failure to reach the RFSimulator server.
 \end{itemize}
 
 \vspace{1em}
 
-In the \texttt{`network\_config`}, I examine the security settings. The SCTP settings show the CU at \texttt{`local\_s\_address: 127.0.0.5`} and the DU targeting \texttt{`remote\_s\_address: 127.0.0.5`}. My initial thought is that the CU log error about an \texttt{"unknown ciphering algorithm"} is critical and likely preventing the CU from initializing properly, which could cascade to the DU and UE failures.
+In the \texttt{`network\_config`}, I examine the security settings. The SCTP settings show the CU at \texttt{`local\_s\_address: 127.0.0.5`} and the DU targeting \texttt{`remote\_s\_address: 127.0.0.5`}. My initial thought is that the CU log error about an \texttt{"unknown ciphering algorithm"} is critical and likely preventing the CU from initializing properly, which could cascade to the DU failures.
 \vspace{1em}
 
 \textbf{\#\# 2. Exploratory Analysis}
+
 \textbf{\#\#\# Step 2.1: Investigating the CU Error}
 
   I begin by focusing on the CU log error: \texttt{`"[RRC] unknown ciphering algorithm \"0\" in section \"security\" of the configuration file"`}. This error message is explicit - the CU is rejecting a ciphering algorithm value of `"0"`. In 5G NR, valid ciphering algorithms are NEA0 (null cipher), NEA1, NEA2, and NEA3. The value `"0"` is not a valid algorithm identifier - it should be written as "nea0" (lowercase, with the "nea" prefix). 
@@ -195,8 +188,6 @@ In the \texttt{`network\_config`}, I examine the security settings. The SCTP set
 \textbf{\#\#\# Step 2.3: Tracing the Impact to DU and UE}
   Now I'll examine the downstream effects. The DU logs show \texttt{`"[SCTP] Connect failed: Connection refused"`} when trying to connect to `127.0.0.5`. In OAI, the F1 interface relies on SCTP to connect the CU and DU. A "Connection refused" error indicates that nothing is listening on the target port. Given that the CU failed to initialize due to the invalid ciphering algorithm, it makes perfect sense that the SCTP server never started, hence the connection refusal.
 
-\vspace{1em}
-  The UE logs report \texttt{`"[HW] connect() to 127.0.0.1:4043 failed, errno(111)"`}. The UE is trying to connect to the RFSimulator, which is typically hosted by the DU. Since the DU couldn't connect to the CU, it likely never fully initialized, meaning the RFSimulator service never started. This is a cascading failure from the CU issue.
 \vspace{1em}
 
 \textbf{\#\# 3. Log and Configuration Correlation}
@@ -256,3 +247,394 @@ Now it's your turn—begin your systematic analysis now:
 
   
 \end{mdframed}
+
+\clearpage
+\section{OAI GNB Configuration Parameters}
+\subsection{OAI CU Configuration Parameters}
+\label{app:oai_gnb_full_config}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Configuration Item} & \textbf{Value(s)} \\
+    \hline
+    \texttt{Active\_gNBs} & \texttt{ ["gNB-Eurecom-CU"]} \\
+    \hline
+    \texttt{Asn1\_verbosity} & \texttt{"none"} \\
+    \hline
+    \texttt{Num\_Threads\_PUSCH} & 8 \\
+    \texttt{gNB\_ID} & \texttt{0xe00} \\
+    \hline
+    \texttt{gNB\_name} & \texttt{"gNB-Eurecom-CU"} \\
+    \hline
+    \texttt{tracking\_area\_code} & 1 \\
+    \hline
+    \texttt{nr\_cellid} & 1 \\
+    \hline
+    \texttt{local\_s\_if\_name} & \texttt{"lo"} \\
+    \hline
+    \texttt{local\_s\_address} & \texttt{"127.0.0.5"} \\
+    \hline
+    \texttt{remote\_s\_address} & \texttt{"127.0.0.3"} \\
+    \hline
+    \texttt{local\_s\_portc} & \texttt{501} \\
+    \hline
+    \texttt{local\_s\_portd} & \texttt{2152} \\
+    \hline
+    \texttt{remote\_s\_portc} & \texttt{500} \\
+    \hline
+    \texttt{remote\_s\_portd} & \texttt{2152} \\
+    \hline
+    \texttt{mcc} & 001\\
+    \hline
+    \texttt{mnc} & 01 \\
+    \hline
+    \texttt{mnc\_length} & 2 \\
+    \hline
+    \texttt{sst} & 1 \\
+    \hline
+    \texttt{SCTP\_INSTREAMS} & \texttt{2} \\
+    \hline
+    \texttt{SCTP\_OUTSTREAMS} & \texttt{2} \\
+    \hline
+    \texttt{amf\_ip\_address.ipv4} & \texttt{"192.168.70.132"} \\
+    \hline
+    \texttt{GNB\_IPV4\_ADDRESS\_FOR\_NG\_AMF} & \texttt{"192.168.8.43"} \\
+    \hline
+    \texttt{GNB\_IPV4\_ADDRESS\_FOR\_NGU} & \texttt{"192.168.8.43"} \\
+    \hline
+    \texttt{GNB\_PORT\_FOR\_S1U} & 2152 \\
+    \hline
+    \texttt{ciphering\_algorithms} & \texttt{("nea3", "nea2", "nea1", "nea0")} \\
+    \hline
+    \texttt{integrity\_algorithms} & \texttt{("nia2", "nia0")} \\
+    \hline
+    \texttt{drb\_ciphering} & \texttt{"yes"} \\
+    \hline
+    \texttt{drb\_integrity} & \texttt{"no"} \\
+    \hline
+    \texttt{global\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{hw\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{phy\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{mac\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{rrc\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{ngap\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{f1ap\_log\_level} & \texttt{"info"} \\
+    \hline
+    \end{tabular}
+\end{table}
+% -----------------------------------------------------------------
+\clearpage
+\subsection{OAI DU Configuration Parameters}
+\begin{multicols}{2}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Configuration Item} & \textbf{Value(s)} \\
+    \hline
+    \texttt{Active\_gNBs} & \texttt{ ["gNB-Eurecom-DU"]} \\
+    \hline
+    \texttt{Asn1\_verbosity} & \texttt{"annoying"} \\
+    \hline
+    \texttt{gNB\_ID} & \texttt{0xe00} \\
+    \hline
+    \texttt{gNB\_DU\_ID} & \texttt{0xe00} \\
+    \hline
+    \texttt{gNB\_name} & \texttt{"gNB-Eurecom-DU"} \\
+    \hline
+    \texttt{tracking\_area\_code} & 1 \\
+    \hline
+    \texttt{nr\_cellid} & 1 \\
+    \hline
+    \texttt{pdsch\_AntennaPorts\_XP} & 2 \\
+    \hline
+    \texttt{pdsch\_AntennaPorts\_N1} & 2 \\
+    \hline
+    \texttt{pdsch\_AntennaPorts} & 4 \\
+    \hline
+    \texttt{do\_CSIRS} & 0 \\
+    \hline
+    \texttt{maxMIMO\_layers} & 1 \\
+    \hline
+    \texttt{do\_SRS} & 0 \\
+    \hline
+    \texttt{min\_rxtxtime} & 6 \\
+    \hline
+    \texttt{force\_256qam\_off} & 1 \\
+    \hline
+    \texttt{sib1\_tda} & 15 \\
+    \hline
+    \texttt{controlResourceSetZero} & 11 \\
+    \hline
+    \texttt{searchSpaceZero} & 0 \\
+    \hline
+    \texttt{mcc} & 001\\
+    \hline
+    \texttt{mnc} & 01 \\
+    \hline
+    \texttt{mnc\_length} & 2 \\
+    \hline
+    \texttt{sst} & 1 \\
+    \hline
+    \texttt{SCTP\_INSTREAMS} & \texttt{2} \\
+    \hline
+    \texttt{SCTP\_OUTSTREAMS} & \texttt{2} \\
+    \hline
+    \texttt{GNB\_IPV4\_ADDRESS\_FOR\_NG\_AMF} & \texttt{"192.168.8.43"} \\
+    \hline
+    \texttt{GNB\_IPV4\_ADDRESS\_FOR\_NGU} & \texttt{"192.168.8.43"} \\
+    \hline
+    \texttt{GNB\_PORT\_FOR\_S1U} & 2152 \\
+    \hline
+    \texttt{dl\_UL\_TransmissionPeriodicity} & 6 \\
+    \hline
+    \texttt{nrofDownlinkSlots} & 7 \\
+    \hline
+    \texttt{nrofDownlinkSymbols} & 6 \\
+    \hline
+    \texttt{nrofUplinkSlots} & 2 \\
+    \hline
+    \texttt{nrofUplinkSymbols} & 4 \\
+    \hline
+    \texttt{ssb\_PositionsInBurst\_Bitmap} & 1 \\
+    \hline
+    \texttt{ssb\_periodicityServingCell} & 2 \\
+    \hline
+    \texttt{dmrs\_TypeA\_Position} & 0 \\
+    \hline
+    \texttt{subcarrierSpacing} & 1 \\
+    \hline
+    \texttt{referenceSubcarrierSpacing} & 1 \\
+    \hline
+    \texttt{ssPBCH\_BlockPower} & -25 \\
+    \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]    
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Configuration Item} & \textbf{Value(s)} \\
+    \hline
+    \texttt{physCellId} & 11 \\
+    \hline
+    \texttt{absoluteFrequencySSB} & 641280 \\
+    \hline
+    \texttt{dl\_frequencyBand} & 78 \\
+    \hline
+    \texttt{dl\_absoluteFrequencyPointA} & 640008 \\
+    \hline
+    \texttt{dl\_offstToCarrier} & 0 \\
+    \hline
+    \texttt{dl\_subcarrierSpacing} & 1 \\
+    \hline
+    \texttt{dl\_carrierBandwidth} & 106 \\
+    \hline
+    \texttt{initialDLBWPlocationAndBandwidth} & 28875 \\
+    \hline
+    \texttt{initialDLBWPsubcarrierSpacing} & 1 \\
+    \hline
+    \texttt{initialDLBWPcontrolResourceSetZero} & 12 \\
+    \hline
+    \texttt{initialDLBWPsearchSpaceZero} & 0 \\
+    \hline
+    \texttt{ul\_frequencyBand} & 78 \\
+    \hline
+    \texttt{ul\_offstToCarrier} & 0 \\
+    \hline
+    \texttt{ul\_subcarrierSpacing} & 1 \\
+    \hline
+    \texttt{ul\_carrierBandwidth} & 106 \\
+    \hline
+    \texttt{pMax} & 20 \\
+    \hline
+    \texttt{initialULBWPlocationAndBandwidth} & 28875 \\
+    \hline
+    \texttt{initialULBWPsubcarrierSpacing} & 1 \\
+    \hline
+    \texttt{prach\_ConfigurationIndex} & 98 \\
+    \hline
+    \texttt{prach\_msg1\_FDM} & 0 \\
+    \hline
+    \texttt{prach\_msg1\_FrequencyStart} & 0 \\
+    \hline
+    \texttt{zeroCorrelationZoneConfig} & 13 \\
+    \hline
+    \texttt{preambleReceivedTargetPower} & -96 \\
+    \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Configuration Item} & \textbf{Value} \\
+    \hline
+    \texttt{preambleTransMax} & 6 \\
+    \hline
+    \texttt{powerRampingStep} & 1 \\
+    \hline
+    \texttt{ra\_ResponseWindow} & 4 \\
+    \hline
+    \texttt{ssb\_perRACH\_OccasionAndCB\_PreamblesPerSSB\_PR} & 4 \\
+    \hline
+    \texttt{ssb\_perRACH\_OccasionAndCB\_PreamblesPerSSB} & 15 \\
+    \hline
+    \texttt{ra\_ContentionResolutionTimer} & 7 \\
+    \hline
+    \texttt{rsrp\_ThresholdSSB} & 19 \\
+    \hline
+    \texttt{prach\_RootSequenceIndex\_PR} & 2 \\
+    \hline
+    \texttt{prach\_RootSequenceIndex} & 1 \\
+    \hline
+    \texttt{msg1\_SubcarrierSpacing} & 1 \\
+    \hline
+    \texttt{restrictedSetConfig} & 0 \\
+    \hline
+    \texttt{msg3\_DeltaPreamble} & 1 \\
+    \hline
+    \texttt{p0\_NominalWithGrant} & -90 \\
+    \hline
+    \texttt{pucchGroupHopping} & 0 \\
+    \hline
+    \texttt{hoppingId} & 40 \\
+    \hline
+    \texttt{p0\_nominal} & -90 \\
+    \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Configuration Item} & \textbf{Value} \\
+    \hline
+    \texttt{num\_cc} & 1 \\
+    \hline
+    \texttt{tr\_s\_preference} & \texttt{"local\_L1"} \\
+    \hline
+    \texttt{tr\_n\_preference} & \texttt{"f1"} \\
+    \hline
+    \texttt{local\_n\_address} & \texttt{"127.0.0.3"} \\
+    \hline
+    \texttt{remote\_n\_address} & \texttt{"127.0.0.5"} \\
+    \hline
+    \texttt{local\_n\_portc} & 500 \\
+    \hline
+    \texttt{local\_n\_portd} & 2152 \\
+    \hline
+    \texttt{remote\_n\_portc} & 501 \\
+    \hline
+    \texttt{remote\_n\_portd} & 2152 \\
+    \hline
+    \texttt{num\_cc} & 1 \\
+    \hline
+    \texttt{tr\_n\_preference} & \texttt{"local\_mac"} \\
+    \hline
+    \texttt{prach\_dtx\_threshold} & 120 \\
+    \hline
+    \texttt{pucch0\_dtx\_threshold} & 150 \\
+    \hline
+    \texttt{ofdm\_offset\_divisor} & 8 \\
+    \hline
+    \texttt{local\_rf} & \texttt{"yes"} \\
+    \hline
+    \texttt{nb\_tx} & 4 \\
+    \hline
+    \texttt{nb\_rx} & 4 \\
+    \hline
+    \texttt{att\_tx} & 0 \\
+    \hline
+    \texttt{att\_rx} & 0 \\
+    \hline
+    \texttt{bands} & {[}78{]} \\
+    \hline
+    \texttt{max\_pdschReferenceSignalPower} & -27 \\
+    \hline
+    \texttt{max\_rxgain} & 114 \\
+    \hline
+    \texttt{do\_precoding} & 0 \\
+    \hline
+    \texttt{sf\_extension} & 0 \\
+    \hline
+    \texttt{sl\_ahead} & 5 \\
+    \hline
+    \texttt{clock\_src} & \texttt{"internal"} \\
+    \hline
+    \texttt{ru\_thread\_core} & 6 \\
+    \hline
+    \texttt{eNB\_instances} & {[}0{]} \\
+    \hline
+    \texttt{serveraddr} & \texttt{"server"} \\
+    \hline
+    \texttt{serverport} & 4043 \\
+    \hline
+    \texttt{modelname} & \texttt{"AWGN"} \\
+    \hline
+    \texttt{options} & \texttt{()} \\
+    \hline
+    \texttt{IQfile} & \texttt{"/tmp/rfsimulator.iqs"} \\
+    \hline
+    \texttt{global\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{hw\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{phy\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{mac\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{rlc\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{pdcp\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{rrc\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{f1ap\_log\_level} & \texttt{"info"} \\
+    \hline
+    \texttt{ngap\_log\_level} & \texttt{"info"} \\
+    \hline
+    \end{tabular}
+\end{table}
+
+
+
+
+
+
+
+
+\end{multicols}
+
+\clearpage
+\section{AI Coding Assistants and LLMs Used in This Study}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{p{3.5cm}p{3cm}p{6.5cm}}
+    \hline
+    \textbf{Model Name} & \textbf{Model source}  & \textbf{Purpose} \\
+    \hline
+    \texttt{Grok Code Fast 1} &\textbf{Copilot}& \texttt{Mutation Generation, Reasoning Traces} \\
+    \hline
+    \texttt{GPT 5.1} &\textbf{Copilot}& \texttt{Mutation Generation, Reasoning Traces} \\
+    \hline
+    \texttt{Gemini 2.5 Pro} &\textbf{Gemini API}& \texttt{Mutation Generation} \\
+    \hline
+    \texttt{Grok 4} &\textbf{Cursor}& \texttt{Mutation Generation, Reasoning Traces} \\
+    \hline
+    \texttt{Oss-gpt-120B} &\textbf{?}& \texttt{Reasoning Traces} \\
+    \hline
+    \texttt{QwQ-32B} &\textbf{Hugging Face}& \texttt{Fine Tune}
+    \end{tabular}
+\end{table}
